@@ -11,11 +11,11 @@
 
   <body>
     <div id="buttons" class="hidden">
-      <button id="talk-button-1" type="button">Answer 1</button>
+      <!-- <button id="talk-button-1" type="button">Answer 1</button>
       <button id="talk-button-2" type="button">Answer 2</button>
       <button id="talk-button-3" type="button">Answer 3</button>
-      <button id="talk-button-4" type="button">Answer 4</button>
-      <button id="destroy-button" type="button">Destroy</button>
+      <button id="talk-button-4" type="button">Answer 4</button> -->
+      <button id="destroy-button" type="button">Esci</button>
       <!-- <div id="status">
           ICE gathering status: <label id="ice-gathering-status-label"></label
           ><br />
@@ -26,7 +26,7 @@
         </div> -->
     </div>
     <div class="container">
-      <button id="startButton">Start</button>
+      <button id="startButton">Entra</button>
       <div id="content" class="hidden">
         <div id="video-wrapper">
           <div>
@@ -35,15 +35,19 @@
         </div>
         <div class="chat-container">
           <div id="chat-box">
-            <div class="message bot">Hello! How can I assist you?</div>
+            <div class="message bot">Come posso aiutarti?</div>
           </div>
           <div class="input-container">
-            <input id="user-input" type="text" placeholder="Type a message..." />
-            <button id="send-button">Send</button>
+            <input id="user-input" type="text" placeholder="Fai una domanda..." />
+            <button id="send-button">Invia</button>
           </div>
         </div>
       </div>
-      <div id="loading" class="hidden">Loading...</div>
+      <div id="loading" class="loading hidden">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
     </div>
 
     <script type="module" src="./index.js"></script>

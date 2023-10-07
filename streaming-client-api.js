@@ -2,11 +2,28 @@
 import DID_API from './api.json' assert { type: 'json' };
 
 const QUESTIONS = [
-  {question: "Chi può accedere all’elenco dei delegati alle vendite?", answer: "Si ritiene che solo l’iscritto alla sezione A dell’albo possa svolgere la funzione di delegato alle vendite"},
-  {question: "Chi ha predisposto le linee guida generali per la formazione dei delegati?", answer: "La Scuola superiore della magistratura e la formazione dei professionisti che provvedono alle operazioni di vendita."},
-  {question: "Ai fini del positivo superamento della prova finale di esame del corso di formazione per i delegati alle vendite, quante devono essere le risposte esatte?", answer: "Il test sarà considerato superato rispondendo correttamente ad almeno 35 domande."},
-  {question: "Secondo quanto previsto dall’art. 179 - ter disp. att. c.p.c. quanti incarichi deve aver svolto il professionista delegato alle operazioni di vendita nel quinquennio precedente per essere iscritto nell’elenco dei delegati?", answer: "Ai fini della dimostrazione della specifica competenza tecnica per la prima iscrizione nell’elenco è richiesto lo svolgimento nel quinquennio precedente di non meno di dieci incarichi di professionista delegato alle operazioni di vendita, senza che la delega sia stata revocata in conseguenza del mancato rispetto dei termini o delle direttive stabilite dal giudice dell’esecuzione"},
-]
+  {
+    question: 'Chi può accedere all’elenco dei delegati alle vendite?',
+    answer:
+      'Si ritiene che solo l’iscritto alla sezione A dell’albo possa svolgere la funzione di delegato alle vendite',
+  },
+  {
+    question: 'Chi ha predisposto le linee guida generali per la formazione dei delegati?',
+    answer:
+      'La Scuola superiore della magistratura e la formazione dei professionisti che provvedono alle operazioni di vendita.',
+  },
+  {
+    question:
+      'Ai fini del positivo superamento della prova finale di esame del corso di formazione per i delegati alle vendite, quante devono essere le risposte esatte?',
+    answer: 'Il test sarà considerato superato rispondendo correttamente ad almeno 35 domande.',
+  },
+  {
+    question:
+      'Secondo quanto previsto dall’art. 179 - ter disp. att. c.p.c. quanti incarichi deve aver svolto il professionista delegato alle operazioni di vendita nel quinquennio precedente per essere iscritto nell’elenco dei delegati?',
+    answer:
+      'Ai fini della dimostrazione della specifica competenza tecnica per la prima iscrizione nell’elenco è richiesto lo svolgimento nel quinquennio precedente di non meno di dieci incarichi di professionista delegato alle operazioni di vendita, senza che la delega sia stata revocata in conseguenza del mancato rispetto dei termini o delle direttive stabilite dal giudice dell’esecuzione',
+  },
+];
 
 if (DID_API.key == '🤫') alert('Please put your api key inside ./api.json and restart..');
 
@@ -24,6 +41,8 @@ let sessionClientAnswer;
 let statsIntervalId;
 let videoIsPlaying;
 let lastBytesReceived;
+
+let loadingResponse;
 
 const talkVideo = document.getElementById('talk-video');
 talkVideo.setAttribute('playsinline', '');
@@ -83,7 +102,7 @@ const connect = async () => {
   });
 };
 
-document.getElementById('send-button').addEventListener('click', function () {
+document.getElementById('send-button').addEventListener('click', async function () {
   const userInput = document.getElementById('user-input');
   const chatBox = document.getElementById('chat-box');
 
@@ -94,12 +113,52 @@ document.getElementById('send-button').addEventListener('click', function () {
     userMessage.textContent = userInput.value;
     chatBox.appendChild(userMessage);
 
+    const similarities = QUESTIONS.map(({ question, answer }, i) => {
+      const similarity = cosineSimilarity(question, userInput.value);
+      return {
+        similarity,
+        answer,
+        id: i + 1,
+      };
+    });
+
+    console.log(userInput.value, similarities);
+
+    const highestElement = similarities.reduce((max, current) => {
+      return (max.similarity || 0) > current.similarity ? max : current;
+    });
+
+    console.log(highestElement);
+
     // Example response from the bot
     // You can replace this with an actual API call to ChatGPT or any other service
     const botMessage = document.createElement('div');
     botMessage.classList.add('message', 'bot');
-    botMessage.textContent = "I'm a simple example and can't generate real replies yet.";
+    
+        
     chatBox.appendChild(botMessage);
+
+    // Create the main 'loading' div
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading';
+
+    // Create 3 dot divs and append to the 'loading' div
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        loadingDiv.appendChild(dot);
+    }
+    botMessage.appendChild(loadingDiv)
+    if (highestElement.similarity > 0.2) {
+      await startStream(highestElement.id);
+      botMessage.removeChild(loadingDiv)
+      botMessage.textContent = highestElement.answer
+    } else {
+      setTimeout( () => {
+        botMessage.removeChild(loadingDiv)
+        botMessage.textContent = 'Non ho una risposta alla tua richiesta. Prova a riformulare la domanda.';
+      }, 1500)
+    }
 
     // Clear the input and scroll to the latest message
     userInput.value = '';
@@ -107,36 +166,29 @@ document.getElementById('send-button').addEventListener('click', function () {
   }
 });
 
-[
-  document.getElementById('talk-button-1'),
-  document.getElementById('talk-button-2'),
-  document.getElementById('talk-button-3'),
-  document.getElementById('talk-button-4'),
-].forEach((e, i) => {
-  e.onclick = async () => {
-    // connectionState not supported in firefox
-    if (peerConnection?.signalingState === 'stable' || peerConnection?.iceConnectionState === 'connected') {
-      const talkResponse = await fetchWithRetries(`${DID_API.url}/talks/streams/${streamId}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${DID_API.key}`,
-          'Content-Type': 'application/json',
+const startStream = async (idRisposta) => {
+  // connectionState not supported in firefox
+  if (peerConnection?.signalingState === 'stable' || peerConnection?.iceConnectionState === 'connected') {
+    const talkResponse = await fetchWithRetries(`${DID_API.url}/talks/streams/${streamId}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${DID_API.key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        script: {
+          type: 'audio',
+          audio_url: `https://webtoup.it/AI/avatar/risposta${idRisposta}.mp3`,
         },
-        body: JSON.stringify({
-          script: {
-            type: 'audio',
-            audio_url: `https://webtoup.it/AI/avatar/risposta${i + 1}.mp3`,
-          },
-          driver_url: 'bank://lively/',
-          config: {
-            stitch: true,
-          },
-          session_id: sessionId,
-        }),
-      });
-    }
-  };
-});
+        driver_url: 'bank://lively/',
+        config: {
+          stitch: true,
+        },
+        session_id: sessionId,
+      }),
+    });
+  }
+};
 
 const destroyButton = document.getElementById('destroy-button');
 destroyButton.onclick = async () => {
@@ -151,6 +203,7 @@ destroyButton.onclick = async () => {
 
   stopAllStreams();
   closePC();
+  window.location.reload();
 };
 
 function onIceGatheringStateChange() {
@@ -205,11 +258,11 @@ function onVideoStatusChange(videoIsPlaying, stream) {
   if (videoIsPlaying) {
     status = 'streaming';
     console.log(stream);
-    talkVideo.style.transform = "scaleX(1.66) scaleY(1.16)"
+    talkVideo.style.transform = 'scaleX(1.66796875) scaleY(1.16015625)';
     const remoteStream = stream;
     setVideoElement(remoteStream);
   } else {
-    talkVideo.style.transform = "scale(1)"
+    talkVideo.style.transform = 'scaleX(1) scaleY(1)';
     status = 'empty';
     playIdleVideo();
   }
@@ -349,3 +402,41 @@ document.getElementById('startButton').onclick = async () => {
   playIdleVideo();
   talkVideo.play();
 };
+
+function tokenize(text) {
+  return text.toLowerCase().match(/\b\w+\b/g);
+}
+
+function termFrequency(term, tokens) {
+  let count = 0;
+  for (let token of tokens) {
+    if (token === term) count++;
+  }
+  return count;
+}
+
+function cosineSimilarity(phrase1, phrase2) {
+  let tokens1 = tokenize(phrase1);
+  let tokens2 = tokenize(phrase2);
+  let terms = Array.from(new Set([...tokens1, ...tokens2]));
+
+  let vector1 = terms.map((term) => termFrequency(term, tokens1));
+  let vector2 = terms.map((term) => termFrequency(term, tokens2));
+
+  let dotProduct = 0;
+  let magnitude1 = 0;
+  let magnitude2 = 0;
+
+  for (let i = 0; i < terms.length; i++) {
+    dotProduct += vector1[i] * vector2[i];
+    magnitude1 += Math.pow(vector1[i], 2);
+    magnitude2 += Math.pow(vector2[i], 2);
+  }
+
+  magnitude1 = Math.sqrt(magnitude1);
+  magnitude2 = Math.sqrt(magnitude2);
+
+  if (magnitude1 === 0 || magnitude2 === 0) return 0;
+
+  return dotProduct / (magnitude1 * magnitude2);
+}
