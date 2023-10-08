@@ -42,7 +42,7 @@ let statsIntervalId;
 let videoIsPlaying;
 let lastBytesReceived;
 
-let loadingResponse;
+let streamingOn = false;
 
 const talkVideo = document.getElementById('talk-video');
 talkVideo.setAttribute('playsinline', '');
@@ -124,15 +124,13 @@ document.getElementById('send-button').addEventListener('click', async function 
       return (max.similarity || 0) > current.similarity ? max : current;
     });
 
-
     console.log(highestElement);
 
     // Example response from the bot
     // You can replace this with an actual API call to ChatGPT or any other service
     const botMessage = document.createElement('div');
     botMessage.classList.add('message', 'bot');
-    
-        
+
     chatBox.appendChild(botMessage);
 
     // Create the main 'loading' div
@@ -141,24 +139,29 @@ document.getElementById('send-button').addEventListener('click', async function 
 
     // Create 3 dot divs and append to the 'loading' div
     for (let i = 0; i < 3; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'dot';
-        loadingDiv.appendChild(dot);
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      loadingDiv.appendChild(dot);
     }
-    botMessage.appendChild(loadingDiv)
+    botMessage.appendChild(loadingDiv);
     if (highestElement.similarity > 0.2) {
-      // await startStream(highestElement.id);
-      setTimeout( () => {
-        playAnswer(highestElement.id)
-        botMessage.removeChild(loadingDiv)
-        botMessage.textContent = highestElement.answer
-      }, 1500);
+      if(streamingOn){
+        await startStream(highestElement.id);
+        botMessage.removeChild(loadingDiv);
+        botMessage.textContent = highestElement.answer;
+      } else {
+        setTimeout(() => {
+          playAnswer(highestElement.id);
+          botMessage.removeChild(loadingDiv);
+          botMessage.textContent = highestElement.answer;
+        }, 1500);
+      }
     } else {
-      setTimeout( () => {
-        playAnswer(0)
-        botMessage.removeChild(loadingDiv)
+      setTimeout(() => {
+        playAnswer(0);
+        botMessage.removeChild(loadingDiv);
         botMessage.textContent = 'Non ho una risposta alla tua richiesta. Prova a riformulare la domanda.';
-      }, 1500)
+      }, 1500);
     }
 
     // Clear the input and scroll to the latest message
@@ -338,15 +341,15 @@ function setVideoElement(stream) {
   }
 }
 
-function playAnswer(id){
-  talkVideo.addEventListener("ended", playIdleVideo)
+function playAnswer(id) {
+  talkVideo.addEventListener('ended', playIdleVideo);
   talkVideo.srcObject = undefined;
   talkVideo.src = `video/answer${id}.mp4`;
   talkVideo.loop = false;
 }
 
 function playIdleVideo() {
-  talkVideo.removeEventListener("ended", playIdleVideo)
+  talkVideo.removeEventListener('ended', playIdleVideo);
   talkVideo.srcObject = undefined;
   talkVideo.src = 'video/or_idle_cut.mp4';
   talkVideo.loop = true;
