@@ -1,5 +1,15 @@
 'use strict';
-import DID_API from './api.json' assert { type: 'json' };
+// import DID_API from './api.json' assert { type: 'json' };
+let DID_API;
+try {
+  const r = await fetch('api.json');
+  DID_API = await r.json();
+} catch {
+  DID_API = {
+    key: '',
+    url: 'https://api.d-id.com',
+  };
+}
 
 const QUESTIONS = [
   {
@@ -145,7 +155,7 @@ document.getElementById('send-button').addEventListener('click', async function 
     }
     botMessage.appendChild(loadingDiv);
     if (highestElement.similarity > 0.2) {
-      if(streamingOn){
+      if (streamingOn) {
         await startStream(highestElement.id);
         botMessage.removeChild(loadingDiv);
         botMessage.textContent = highestElement.answer;
@@ -407,7 +417,11 @@ async function fetchWithRetries(url, options, retries = 1) {
 document.getElementById('startButton').onclick = async () => {
   document.getElementById('startButton').classList.add('hidden');
   document.getElementById('loading').classList.remove('hidden');
-  await connect();
+  if(DID_API.key){
+    await connect();
+  } else {
+    await new Promise(r => setTimeout(r, 2000));
+  }
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
   document.getElementById('buttons').classList.remove('hidden');
