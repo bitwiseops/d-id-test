@@ -48,7 +48,7 @@ const talkVideo = document.getElementById('talk-video');
 talkVideo.setAttribute('playsinline', '');
 
 talkVideo.addEventListener('loadedmetadata', function () {
-  console.log('Remote video videoWidth: ' + this.videoWidth + 'px,  videoHeight: ' + this.videoHeight + 'px');
+  console.log('Video Metadata - videoWidth: ' + this.videoWidth + 'px,  videoHeight: ' + this.videoHeight + 'px');
 });
 
 // const peerStatusLabel = document.getElementById('peer-status-label');
@@ -113,20 +113,17 @@ document.getElementById('send-button').addEventListener('click', async function 
     userMessage.textContent = userInput.value;
     chatBox.appendChild(userMessage);
 
-    const similarities = QUESTIONS.map(({ question, answer }, i) => {
+    const highestElement = QUESTIONS.map(({ question, answer }, i) => {
       const similarity = cosineSimilarity(question, userInput.value);
       return {
         similarity,
         answer,
         id: i + 1,
       };
-    });
-
-    console.log(userInput.value, similarities);
-
-    const highestElement = similarities.reduce((max, current) => {
+    }).reduce((max, current) => {
       return (max.similarity || 0) > current.similarity ? max : current;
     });
+
 
     console.log(highestElement);
 
@@ -150,11 +147,15 @@ document.getElementById('send-button').addEventListener('click', async function 
     }
     botMessage.appendChild(loadingDiv)
     if (highestElement.similarity > 0.2) {
-      await startStream(highestElement.id);
-      botMessage.removeChild(loadingDiv)
-      botMessage.textContent = highestElement.answer
+      // await startStream(highestElement.id);
+      setTimeout( () => {
+        playAnswer(highestElement.id)
+        botMessage.removeChild(loadingDiv)
+        botMessage.textContent = highestElement.answer
+      }, 1500);
     } else {
       setTimeout( () => {
+        playAnswer(0)
         botMessage.removeChild(loadingDiv)
         botMessage.textContent = 'Non ho una risposta alla tua richiesta. Prova a riformulare la domanda.';
       }, 1500)
@@ -337,9 +338,17 @@ function setVideoElement(stream) {
   }
 }
 
-function playIdleVideo() {
+function playAnswer(id){
+  talkVideo.addEventListener("ended", playIdleVideo)
   talkVideo.srcObject = undefined;
-  talkVideo.src = 'or_idle_cut.mp4';
+  talkVideo.src = `video/answer${id}.mp4`;
+  talkVideo.loop = false;
+}
+
+function playIdleVideo() {
+  talkVideo.removeEventListener("ended", playIdleVideo)
+  talkVideo.srcObject = undefined;
+  talkVideo.src = 'video/or_idle_cut.mp4';
   talkVideo.loop = true;
 }
 
